@@ -227,10 +227,13 @@ module.exports = {
       views: ad.views,
       images,
       category,
-      userInfo: {
-        name: userInfo.name,
-        email: userInfo.email,
-      },
+      userInfo: userInfo
+        ? {
+            name: userInfo.name,
+            email: userInfo.email,
+          }
+        : { name: "Usuário não encontrado", email: "" },
+      stateName: stateInfo ? stateInfo.name : "Estado não encontrado",
       stateName: stateInfo.name,
       others,
     });
