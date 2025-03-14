@@ -9,7 +9,6 @@ const apiRoutes = require("./src/routes");
 
 const server = express();
 
-// 🌐 Configurar CORS para aceitar todos os métodos
 server.use(
   cors({
     origin: "*",
@@ -24,7 +23,6 @@ server.use(fileupload());
 server.use(express.static(path.join(__dirname, "public")));
 server.use("/", apiRoutes);
 
-// 🔗 Conectar ao MongoDB
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.DATABASE, {
@@ -34,7 +32,7 @@ const connectDB = async () => {
     console.log("✅ Conectado ao MongoDB");
   } catch (error) {
     console.error("❌ Erro ao conectar ao MongoDB:", error.message);
-    process.exit(1); // Encerra o processo em caso de erro crítico
+    process.exit(1);
   }
 };
 
@@ -44,12 +42,10 @@ mongoose.connection.on("error", (error) => {
   console.log("⚠️ Erro de conexão MongoDB:", error.message);
 });
 
-// 📡 Rota de teste
 server.get("/ping", (req, res) => {
   res.json({ status: "API Online", port: process.env.PORT });
 });
 
-// 🚀 Inicia o servidor
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(
