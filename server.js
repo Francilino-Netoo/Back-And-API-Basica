@@ -10,14 +10,13 @@ const apiRoutes = require("./src/routes");
 const server = express();
 
 // 🌐 Configurar CORS para aceitar todos os métodos
-server.use(
+app.use(
   cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: ["https://francilino-netoo.github.io"], // Permite apenas seu frontend
+    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
+    allowedHeaders: ["Content-Type", "Authorization"], // Cabeçalhos permitidos
   })
 );
-
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 server.use(fileupload());
