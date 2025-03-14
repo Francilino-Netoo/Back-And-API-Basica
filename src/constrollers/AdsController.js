@@ -1,16 +1,24 @@
 const { v4: uuid } = require("uuid");
-const jimp = require("jimp");
+const Jimp = require("jimp");
+
 const mongoose = require("mongoose");
 
 const Category = require("../models/Category");
 const User = require("../models/User");
 const Ad = require("../models/Ad");
 const StateModel = require("../models/State");
+const sharp = require("sharp");
 
 const addImage = async (buffer) => {
   let newName = `${uuid()}.jpg`;
-  let tmpImg = await jimp.read(buffer);
-  tmpImg.cover(500, 500).quality(80).write(`./public/media/${newName}`);
+
+  let convertedBuffer = await sharp(buffer).jpeg().toBuffer();
+
+  let tmpImg = await Jimp.read(convertedBuffer);
+  tmpImg.cover(500, 500).quality(80);
+
+  await tmpImg.writeAsync(`./public/media/${newName}`);
+
   return newName;
 };
 
