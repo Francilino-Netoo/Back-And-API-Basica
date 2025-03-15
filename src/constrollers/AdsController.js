@@ -2,6 +2,7 @@ const { v4: uuid } = require("uuid");
 const Jimp = require("jimp");
 
 const mongoose = require("mongoose");
+const cloudinary = require("../config/cloudinaryConfig");
 
 const Category = require("../models/Category");
 const User = require("../models/User");
@@ -41,7 +42,7 @@ module.exports = {
     const user = await User.findOne({ token }).exec();
 
     if (!title || !cat) {
-      res.json({ error: "Titulo e/ou categoria não foram preenchidos" });
+      res.json({ error: "Título e/ou categoria não foram preenchidos" });
       return;
     }
 
@@ -57,57 +58,64 @@ module.exports = {
     }
 
     if (price) {
-      // R$ 8.000,35 = 8000.35
       price = price.replace(".", "").replace(",", ".").replace("R$ ", "");
       price = parseFloat(price);
     } else {
       price = 0;
     }
 
-    const newAd = new Ad();
-    newAd.status = true;
-    newAd.idUser = user._id;
-    newAd.state = user.state;
-    newAd.dateCreated = new Date();
-    newAd.title = title;
-    newAd.category = cat;
-    newAd.price = price;
-    newAd.priceNegotiable = priceneg == "true" ? true : false;
-    newAd.description = desc;
-    newAd.views = 0;
+    const newAd = new Ad({
+      status: true,
+      idUser: user._id,
+      state: user.state,
+      dateCreated: new Date(),
+      title,
+      category: cat,
+      price,
+      priceNegotiable: priceneg === "true",
+      description: desc,
+      views: 0,
+      images: [],
+    });
 
     if (req.files && req.files.img) {
-      if (req.files.img.length == undefined) {
-        if (
-          ["image/jpeg", "image/jpg", "image/png"].includes(
-            req.files.img.mimetype
-          )
-        ) {
-          let url = await addImage(req.files.img.data);
-          newAd.images.push({
-            url,
-            default: false,
-          });
-        }
-      } else {
-        for (let i = 0; i < req.files.img.length; i++) {
-          if (
-            ["image/jpeg", "image/jpg", "image/png"].includes(
-              req.files.img[i].mimetype
-            )
-          ) {
-            let url = await addImage(req.files.img[i].data);
-            newAd.images.push({
-              url,
-              default: false,
-            });
+      const images = Array.isArray(req.files.img)
+        ? req.files.img
+        : [req.files.img];
+
+      for (const img of images) {
+        if (["image/jpeg", "image/jpg", "image/png"].includes(img.mimetype)) {
+          try {
+            const result = await cloudinary.uploader.upload_stream(
+              {
+                folder: "ads",
+                public_id: uuid(),
+                transformation: [{ width: 500, height: 500, crop: "limit" }],
+              },
+              (error, uploadResult) => {
+                if (error) {
+                  console.error("Erro ao enviar para o Cloudinary:", error);
+                } else {
+                  newAd.images.push({
+                    url: uploadResult.secure_url,
+                    default: false,
+                  });
+
+                  if (newAd.images.length === 1) {
+                    newAd.images[0].default = true;
+                  }
+
+                  newAd.save();
+                }
+              }
+            );
+
+            result.end(img.data);
+          } catch (error) {
+            console.error("Erro ao processar a imagem:", error);
           }
         }
       }
-    }
-
-    if (newAd.images.length > 0) {
-      newAd.images[0].default = true;
     }
 
     const info = await newAd.save();
