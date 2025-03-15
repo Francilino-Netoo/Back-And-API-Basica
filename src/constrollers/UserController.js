@@ -42,22 +42,29 @@ module.exports = {
 
     let updates = {};
 
+    const user = await User.findOne({ token: data.token });
+    if (!user) {
+      return res.status(400).json({ error: "Usuário não encontrado!" });
+    }
+
     if (data.name) {
       updates.name = data.name;
     }
 
     if (data.email) {
       const emailCheck = await User.findOne({ email: data.email });
-      if (emailCheck) {
-        res.json({ error: "E-mail já existente!" });
-        return;
+
+      if (emailCheck && emailCheck._id.toString() !== user._id.toString()) {
+        return res.status(400).json({ error: "E-mail já existente!" });
       }
+
       updates.email = data.email;
     }
 
     if (data.state) {
       if (mongoose.Types.ObjectId.isValid(data.state)) {
         const stateCheck = await State.findById(data.state);
+
         if (!stateCheck) {
           res.json({ error: "Estado não existe" });
           return;
