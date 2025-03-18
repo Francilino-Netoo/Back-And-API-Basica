@@ -257,6 +257,7 @@ module.exports = {
   editAction: async (req, res) => {
     let { id } = req.params;
     let { title, status, price, priceneg, desc, cat, images, token } = req.body;
+    console.log(req.body);
 
     if (id.length < 12) {
       res.json({ error: "ID inválido" });
@@ -281,7 +282,6 @@ module.exports = {
       updates.title = title;
     }
     if (price) {
-      // R$ 8.000,35 = 8000.35
       price = price.replace(".", "").replace(",", ".").replace("R$ ", "");
       price = parseFloat(price);
       updates.price = price;
@@ -296,7 +296,9 @@ module.exports = {
       updates.description = desc;
     }
     if (cat) {
-      const category = await Category.findOne({ slug: cat }).exec();
+      console.log("Categoria recebida:", cat);
+      const category = await Category.findById(cat).exec();
+
       if (!category) {
         res.json({ error: "Categoria inexistente" });
         return;
@@ -304,46 +306,52 @@ module.exports = {
       updates.category = category._id.toString();
     }
 
-    if (images) {
-      updates.images = images;
-    }
-
-    await Ad.findByIdAndUpdate(id, { $set: updates });
-
     if (req.files && req.files.img) {
-      const adI = await Ad.findById(id);
+      const imageFiles = Array.isArray(req.files.img)
+        ? req.files.img
+        : [req.files.img];
 
-      if (req.files.img.length == undefined) {
-        if (
-          ["image/jpeg", "image/jpg", "image/png"].includes(
-            req.files.img.mimetype
-          )
-        ) {
-          let url = await addImage(req.files.img.data);
-          adI.images.push({
-            url,
-            default: false,
-          });
-        }
-      } else {
-        for (let i = 0; i < req.files.img.length; i++) {
-          if (
-            ["image/jpeg", "image/jpg", "image/png"].includes(
-              req.files.img[i].mimetype
-            )
-          ) {
-            let url = await addImage(req.files.img[i].data);
-            adI.images.push({
-              url,
-              default: false,
+      let imageUrls = [];
+
+      for (const img of imageFiles) {
+        if (["image/jpeg", "image/jpg", "image/png"].includes(img.mimetype)) {
+          try {
+            const result = await new Promise((resolve, reject) => {
+              cloudinary.uploader
+                .upload_stream(
+                  {
+                    folder: "ads",
+                    public_id: uuid(),
+                    transformation: [
+                      { width: 500, height: 500, crop: "limit" },
+                    ],
+                  },
+                  (error, uploadResult) => {
+                    if (error) {
+                      reject(error);
+                    } else {
+                      resolve(uploadResult);
+                    }
+                  }
+                )
+                .end(img.data);
             });
+
+            imageUrls.push(result.secure_url);
+          } catch (error) {
+            console.error("Erro ao enviar imagem para o Cloudinary:", error);
           }
         }
       }
-
-      adI.images = [...adI.images];
-      await adI.save();
+      if (imageUrls.length > 0) {
+        updates.images = imageUrls.map((url, index) => ({
+          url,
+          default: index === 0,
+        }));
+      }
     }
+
+    await Ad.findByIdAndUpdate(id, { $set: updates });
 
     res.json({ error: "" });
   },
