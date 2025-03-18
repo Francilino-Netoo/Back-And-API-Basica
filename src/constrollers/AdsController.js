@@ -257,7 +257,7 @@ module.exports = {
   editAction: async (req, res) => {
     let { id } = req.params;
     let { title, status, price, priceneg, desc, cat, images, token } = req.body;
-    console.log(req.body);
+    //console.log(req.body);
 
     if (id.length < 12) {
       res.json({ error: "ID inválido" });
@@ -296,7 +296,7 @@ module.exports = {
       updates.description = desc;
     }
     if (cat) {
-      console.log("Categoria recebida:", cat);
+      //console.log("Categoria recebida:", cat);
       const category = await Category.findById(cat).exec();
 
       if (!category) {
